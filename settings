@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings | Crypto Tracker</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:"Poppins",sans-serif; }
+body { background: linear-gradient(135deg,#000428,#004e92); min-height:100vh; color:#e9faff; overflow-x:hidden; transition: background 0.3s, color 0.3s; }
+
+body.theme-light { background: linear-gradient(135deg,#f5f5f5,#e0e0e0); color:#333; }
+body.theme-light header { background:rgba(0,0,0,0.1); border-bottom:1px solid rgba(0,0,0,0.2); }
+body.theme-light .card { background:rgba(0,0,0,0.05); border:1px solid rgba(0,0,0,0.1); }
+body.theme-light select { background:rgba(0,0,0,0.05); color:#333; }
+body.theme-light select option { color:#333; }
+body.theme-light #save-settings-btn { background:linear-gradient(135deg,#00C9FF,#92FE9D); color:#000; }
+body.theme-light h1, body.theme-light h2 { color:#333; text-shadow:none; }
+body.theme-light p { color:#666; }
+body.theme-light header nav a { color:#007bff; }
+body.theme-light header nav a:hover { color:#0056b3; }
+
+body.theme-sepia { background: linear-gradient(135deg,#f4e4bc,#d2b48c); color:#5c4033; }
+body.theme-sepia header { background:rgba(139,69,19,0.1); border-bottom:1px solid rgba(139,69,19,0.2); }
+body.theme-sepia .card { background:rgba(139,69,19,0.05); border:1px solid rgba(139,69,19,0.1); }
+body.theme-sepia select { background:rgba(139,69,19,0.05); color:#5c4033; }
+body.theme-sepia select option { color:#5c4033; }
+body.theme-sepia #save-settings-btn { background:linear-gradient(135deg,#daa520,#f4a460); color:#000; }
+body.theme-sepia h1, body.theme-sepia h2 { color:#5c4033; text-shadow:none; }
+body.theme-sepia p { color:#8b4513; }
+body.theme-sepia header nav a { color:#daa520; }
+body.theme-sepia header nav a:hover { color:#b8860b; }
+
+select,
+select option {
+  color: #000 !important;
+  background: #fff !important;
+}
+
+.glow-one, .glow-two { position:fixed; width:550px; height:550px; z-index:-1; border-radius:50%; filter:blur(150px); opacity:0.7; }
+.glow-one { background: radial-gradient(circle, rgba(0,200,255,0.6), transparent 70%); top:-120px; left:-120px; animation:float1 12s ease-in-out infinite alternate; }
+.glow-two { background: radial-gradient(circle, rgba(255,0,200,0.5), transparent 70%); bottom:-120px; right:-120px; animation:float2 15s ease-in-out infinite alternate; }
+@keyframes float1{from{transform:translate(-40px,-20px);}to{transform:translate(40px,20px);}}
+@keyframes float2{from{transform:translate(40px,40px);}to{transform:translate(-40px,-40px);}}
+
+header{backdrop-filter:blur(20px); background:rgba(255,255,255,0.1); border-bottom:1px solid rgba(255,255,255,0.2); padding:15px 25px; display:flex; justify-content:space-between; align-items:center; border-radius:15px; margin:10px;}
+header nav a{color:#00f2ff; text-decoration:none; margin-right:20px; font-weight:500; transition:0.3s;}
+header nav a:hover{color:#92FE9D; text-shadow:0 0 8px rgba(0,255,255,0.6);}
+header nav a[style*="font-weight:bold"] { color: #fff; }
+#logout-btn{background:linear-gradient(135deg,#ff0055,#ff4d4d); padding:10px 15px; border-radius:12px; border:none; color:#fff; font-weight:500; cursor:pointer; transition:0.3s; box-shadow:0 4px 15px rgba(255,50,100,0.4);}
+#logout-btn:hover{transform:translateY(-2px); box-shadow:0 6px 20px rgba(255,50,100,0.6);}
+
+.container{width:90%; max-width:1000px; margin:30px auto 60px auto;}
+h1{margin-bottom:20px; color:#fff; text-shadow:0 0 8px rgba(0,200,255,0.4);}
+h2{margin-bottom:15px; color:#fff; text-shadow:0 0 6px rgba(0,255,255,0.3);}
+p{color:#ccc;}
+
+.card{backdrop-filter:blur(18px); background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); border-radius:18px; padding:20px; margin-bottom:20px; box-shadow:0 0 18px rgba(0,0,0,0.3); transition:0.3s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 0 25px rgba(0,255,255,0.4);}
+
+.settings-section{margin-bottom:20px;}
+.setting-item{margin-bottom:15px; display:flex; flex-direction:column;}
+.setting-item label{margin-bottom:5px; font-weight:500;}
+select{padding:10px; border-radius:10px; border:none; background:rgba(255,255,255,0.05); color:#fff; backdrop-filter:blur(10px);}
+#save-settings-btn{margin-top:20px; padding:10px 15px; border:none; border-radius:12px; background:linear-gradient(135deg,#00C9FF,#92FE9D); color:#000; font-weight:500; cursor:pointer; transition:0.3s;}
+#save-settings-btn:hover{transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,255,255,0.4);}
+.status-text{margin-top:10px; color:#00C9FF;}
+
+footer { text-align: center; padding: 20px; color: #ccc; backdrop-filter: blur(10px); background: rgba(255,255,255,0.05); border-top: 1px solid rgba(255,255,255,0.1); margin-top: 40px; }
+</style>
+</head>
+
+<body>
+<div class="glow-one"></div>
+<div class="glow-two"></div>
+
+<header>
+<nav>
+        <a href="home.html">Home</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="portfolio.html">Portfolio</a>
+        <a href="compare.html">Compare</a>
+        <a href="favorites.html">Favorites</a>
+        <a href="news.html">News</a>
+        <a href="settings.html" style="font-weight:bold;">Settings</a>
+</nav>
+<button id="logout-btn" aria-label="Logout from account">Logout</button>
+</header>
+
+<main class="container">
+<h1>User Settings</h1>
+<p style="margin-bottom:30px;">Customize your application experience.</p>
+
+<section class="settings-section card">
+<h2>Appearance</h2>
+<div class="setting-item">
+<label for="theme-select">Theme:</label>
+<select id="theme-select">
+<option value="dark">Dark</option>
+<option value="light">Light</option>
+<option value="sepia">Sepia</option>
+</select>
+</div>
+</section>
+
+<section class="settings-section card">
+<h2>Data Preferences</h2>
+<div class="setting-item">
+<label for="currency-select">Base Currency:</label>
+<select id="currency-select">
+<option value="usd">USD</option>
+<option value="eur">EUR</option>
+<option value="gbp">GBP</option>
+<option value="cad">CAD</option>
+<option value="aud">AUD</option>
+<option value="inr">INR</option>
+<option value="jpy">JPY</option>
+</select>
+</div>
+<div class="setting-item">
+<label for="chart-style-select">Default Chart Type:</label>
+<select id="chart-style-select">
+<option value="line">Line Chart</option>
+<option value="bar">Bar Chart</option>
+</select>
+</div>
+</section>
+
+<section class="settings-section card">
+<h2>About</h2>
+<p><strong>Crypto Tracker:</strong> A modern web application built with HTML, CSS, and JavaScript. All crypto market data is sourced from the CoinGecko API. Portfolio and user data is stored locally using the browser's <code>localStorage</code>.</p>
+</section>
+
+<button id="save-settings-btn">Save Settings</button>
+<p id="settings-message" class="status-text"></p>
+</main>
+
+<footer>
+<p>&copy; 2024 Crypto Tracker</p>
+</footer>
+
+<script>
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+const defaultSettings = {
+    theme: 'dark',
+    baseCurrency: 'usd',
+    chartType: 'line'
+};
+
+function loadSettings() {
+    const settings = JSON.parse(localStorage.getItem('userSettings')) || defaultSettings;
+    document.getElementById('theme-select').value = settings.theme;
+    document.getElementById('currency-select').value = settings.baseCurrency;
+    document.getElementById('chart-style-select').value = settings.chartType;
+    applyTheme(settings.theme);
+}
+
+function applyTheme(theme) {
+    document.body.className = `theme-${theme}`;
+}
+
+function saveSettings() {
+    const settings = {
+        theme: document.getElementById('theme-select').value,
+        baseCurrency: document.getElementById('currency-select').value,
+        chartType: document.getElementById('chart-style-select').value
+    };
+    localStorage.setItem('userSettings', JSON.stringify(settings));
+    applyTheme(settings.theme);
+    document.getElementById('settings-message').textContent = 'Settings saved successfully!';
+    setTimeout(() => {
+        document.getElementById('settings-message').textContent = '';
+    }, 3000);
+}
+
+function logout() {
+    localStorage.removeItem('authToken');
+    sessionStorage.clear();
+    window.location.href = 'login.html';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadSettings();
+    document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
+    document.getElementById('logout-btn').addEventListener('click', logout);
+});
+</script>
+
+</body>
+</html>
