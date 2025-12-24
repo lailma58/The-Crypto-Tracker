@@ -1,0 +1,79 @@
+const CACHE_NAME = 'crypto-tracker-cache-v1';
+
+const urlsToCache = [
+    '/',
+    '/index.html',
+    '/signup.html',
+    '/home.html',
+    '/dashboard.html',
+    '/coin.html',
+    '/portfolio.html',
+    '/compare.html',
+    '/news.html',
+    '/settings.html',
+    '/analytics.html',
+    '/converter.html',
+    'assets/css/main.css',
+    'assets/css/themes.css',
+    'assets/js/utils.js',
+    'assets/js/apiService.js',
+    'assets/js/auth.js',
+    'assets/js/dashboard.js',
+    'assets/js/coinDetails.js',
+    'assets/js/homepage.js',
+    'assets/js/settings.js',
+    'assets/js/portfolio.js',
+    'assets/js/news.js',
+    'assets/js/compare.js',
+    'https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js'
+];
+
+self.addEventListener('install', event => {
+    console.log('[Service Worker] Install');
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => {
+                console.log('[Service Worker] Pre-caching all essential files');
+                return cache.addAll(urlsToCache);
+            })
+            .catch(error => {
+                console.error('[Service Worker] Failed to cache:', error);
+            })
+    );
+});
+
+self.addEventListener('activate', event => {
+    console.log('[Service Worker] Activate');
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) {
+                        console.log('[Service Worker] Deleting old cache:', cacheName);
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        })
+    );
+    return self.clients.claim();
+});
+
+self.addEventListener('fetch', event => {
+    const isApiRequest = event.request.url.includes('api.coingecko.com');
+
+    if (!isApiRequest && event.request.method === 'GET') {
+        event.respondWith(
+            caches.match(event.request)
+                .then(response => {
+                    if (response) {
+                        return response;
+                    }
+                    return fetch(event.request);
+                })
+                .catch(error => {
+                    console.error('[Service Worker] Fetch failed:', error);
+                })
+        );
+    }
+});
