@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Compare Coins | Crypto Tracker</title>
 
-<!-- Firebase -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
@@ -34,7 +33,6 @@
   };
 </script>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
@@ -191,7 +189,6 @@ async function renderChart(coin1Id, coin2Id) {
   comparisonResults.style.display = "block";
 }
 
-// Form submit
 compareForm.addEventListener("submit", async e=>{
   e.preventDefault();
   if(!coinSelect1.value || !coinSelect2.value || coinSelect1.value === coinSelect2.value){
