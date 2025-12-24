@@ -1,0 +1,51 @@
+export const binarySearch = (arr, key, target) => {
+    let left = 0, right = arr.length - 1;
+    while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        if (arr[mid][key] === target) return mid;
+        else if (arr[mid][key] < target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return -1;
+};
+
+export const quickSort = (arr, key, ascending = true) => {
+    if (arr.length <= 1) return arr;
+    const pivot = arr[arr.length - 1];
+    const left = [], right = [];
+    for (let i = 0; i < arr.length - 1; i++) {
+        if (ascending ? arr[i][key] < pivot[key] : arr[i][key] > pivot[key]) left.push(arr[i]);
+        else right.push(arr[i]);
+    }
+    return [...quickSort(left, key, ascending), pivot, ...quickSort(right, key, ascending)];
+};
+
+export class HashMap {
+    constructor() {
+        this.map = {};
+    }
+    set(key, value) {
+        this.map[key] = value;
+    }
+    get(key) {
+        return this.map[key] ?? null;
+    }
+    has(key) {
+        return this.map.hasOwnProperty(key);
+    }
+    remove(key) {
+        delete this.map[key];
+    }
+    keys() {
+        return Object.keys(this.map);
+    }
+}
+
+export const topN = (arr, key, n) => {
+    const sorted = quickSort(arr, key, false);
+    return sorted.slice(0, n);
+};
+
+export const filterBy = (arr, key, value) => arr.filter(item => item[key] === value);
+
+export const sumBy = (arr, key) => arr.reduce((acc, obj) => acc + (obj[key] || 0), 0);
