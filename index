@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login | Crypto Tracker</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAQMe4N46ClhPL2V9OLdH6Z7WbyAfPTrJE",
+  authDomain: "the-crypto-tracker.firebaseapp.com",
+  projectId: "the-crypto-tracker",
+  storageBucket: "the-crypto-tracker.appspot.com",
+  messagingSenderId: "588729139716",
+  appId: "1:588729139716:web:cb1dd8b5965dc019e76b51"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+window.loginUser = async (email, password) => {
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    window.location.href = "home.html";
+    return null;
+  } catch (error) {
+    return error.code;
+  }
+};
+</script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Poppins",sans-serif;}
+body{background:linear-gradient(135deg,#000428,#004e92);height:100vh;display:flex;justify-content:center;align-items:center;overflow:hidden;}
+
+.glow,.glow2{position:absolute;width:500px;height:500px;border-radius:50%;filter:blur(120px);animation:float 10s ease-in-out infinite alternate;}
+.glow{background:radial-gradient(circle,rgba(0,204,255,0.6),transparent 70%);top:-100px;left:-150px;}
+.glow2{background:radial-gradient(circle,rgba(255,0,200,0.5),transparent 70%);right:-100px;bottom:-100px;filter:blur(150px);animation:float2 12s ease-in-out infinite alternate;}
+
+@keyframes float{from{transform:translate(-150px,-100px);}to{transform:translate(-50px,0px);}}
+@keyframes float2{from{transform:translate(50px,70px);}to{transform:translate(0px,-50px);}}
+
+.auth-container{width:380px;padding:40px;border-radius:20px;backdrop-filter:blur(20px);background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);box-shadow:0 0 30px rgba(0,0,0,0.4);animation:fadeUp 0.9s ease;position:relative;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+
+.auth-container h1{text-align:center;font-size:28px;color:#fff;margin-bottom:10px;font-weight:600;}
+.auth-container h2{text-align:center;font-size:22px;color:#d9faff;margin-bottom:25px;font-weight:400;}
+
+label{color:#e9faff;font-size:14px;}
+input{width:100%;padding:12px;margin:8px 0 18px 0;border:none;border-radius:10px;background:rgba(255,255,255,0.2);color:white;outline:none;font-size:15px;transition:0.3s;}
+input:focus{background:rgba(255,255,255,0.3);transform:scale(1.02);box-shadow:0 0 12px rgba(0,200,255,0.5);}
+
+.password-wrapper{position:relative;}
+.password-toggle{position:absolute;top:50%;right:12px;transform:translateY(-50%);cursor:pointer;user-select:none;}
+
+.btn{width:100%;padding:12px;background:linear-gradient(135deg,#00d4ff,#0077ff);color:#fff;border:none;border-radius:12px;font-size:16px;cursor:pointer;transition:0.3s;box-shadow:0 4px 20px rgba(0,140,255,0.4);}
+.btn:disabled{opacity:0.6;cursor:not-allowed;}
+.btn:hover:not(:disabled){transform:translateY(-3px) scale(1.03);box-shadow:0 6px 25px rgba(0,140,255,0.6);}
+
+.spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top:2px solid #fff;border-radius:50%;animation:spin 1s linear infinite;margin-right:8px;}
+@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+
+.auth-link{margin-top:15px;color:#e3faff;text-align:center;}
+.auth-link a{color:#00eaff;text-decoration:none;font-weight:500;}
+.message{text-align:center;margin-top:10px;color:#ffabab;font-size:14px;transition:color 0.3s;}
+</style>
+</head>
+
+<body>
+<div class="glow"></div>
+<div class="glow2"></div>
+
+<main class="auth-container">
+<h1>Crypto Tracker</h1>
+<h2>Login</h2>
+
+<form id="login-form">
+<label for="login-email">Email</label>
+<input type="email" id="login-email" required>
+
+<label for="login-password">Password</label>
+<div class="password-wrapper">
+<input type="password" id="login-password" required>
+<span id="toggle-password" class="password-toggle">
+<svg id="eye-open" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="#00eaff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+<circle cx="12" cy="12" r="3"/>
+</svg>
+<svg id="eye-closed" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="#00eaff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="display:none">
+<path d="M17.94 17.94a10.94 10.94 0 0 1-11.88 0"/>
+<path d="M1 1l22 22"/>
+</svg>
+</span>
+</div>
+
+<button type="submit" class="btn">
+<span class="spinner" id="login-spinner"></span>
+Login
+</button>
+</form>
+
+<p class="auth-link">Don't have an account? <a href="signup.html">Sign Up</a></p>
+<p id="login-message" class="message"></p>
+</main>
+
+<script type="module">
+const loginForm=document.getElementById("login-form");
+const loginMessage=document.getElementById("login-message");
+const togglePassword=document.getElementById("toggle-password");
+const passwordInput=document.getElementById("login-password");
+const loginButton=loginForm.querySelector("button");
+const loginSpinner=document.getElementById("login-spinner");
+const eyeOpen=document.getElementById("eye-open");
+const eyeClosed=document.getElementById("eye-closed");
+
+const emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+togglePassword.addEventListener("click",()=>{
+const isPassword=passwordInput.type==="password";
+passwordInput.type=isPassword?"text":"password";
+eyeOpen.style.display=isPassword?"none":"inline";
+eyeClosed.style.display=isPassword?"inline":"none";
+});
+
+loginForm.addEventListener("submit",async e=>{
+e.preventDefault();
+loginMessage.style.color="#e3faff";
+loginMessage.textContent="Logging in...";
+loginButton.disabled=true;
+loginSpinner.style.display="inline-block";
+
+const email=document.getElementById("login-email").value.trim();
+const password=passwordInput.value;
+
+if(!emailRegex.test(email)){
+loginMessage.style.color="#ffabab";
+loginMessage.textContent="Please enter a valid email address.";
+loginButton.disabled=false;
+loginSpinner.style.display="none";
+return;
+}
+
+if(password.length<6){
+loginMessage.style.color="#ffabab";
+loginMessage.textContent="Password must be at least 6 characters.";
+loginButton.disabled=false;
+loginSpinner.style.display="none";
+return;
+}
+
+try{
+const result=await window.loginUser(email,password);
+if(result){
+switch(result){
+case"auth/user-not-found":loginMessage.textContent="No account found with this email.";break;
+case"auth/wrong-password":loginMessage.textContent="Incorrect password.";break;
+case"auth/too-many-requests":loginMessage.textContent="Too many attempts. Try again later.";break;
+default:loginMessage.textContent="Login failed. Please try again.";
+}
+loginMessage.style.color="#ffabab";
+}
+}catch{
+loginMessage.textContent="An unexpected error occurred. Please try again.";
+loginMessage.style.color="#ffabab";
+}finally{
+loginButton.disabled=false;
+loginSpinner.style.display="none";
+}
+});
+</script>
+</body>
+</html>
