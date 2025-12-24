@@ -1,0 +1,33 @@
+async function renderCoinView({id: coinId}) {
+    const details = appState.coinList.find(c => c.id === coinId);
+    const chartData = await fetchMarketChart(coinId, 30);
+    const priceChange = details?.market_data?.price_change_percentage_24h || 0;
+    const isFav = appState.favorites.includes(coinId);
+
+    const content = `
+        <div class="neo-card p-6 flex justify-between items-center">
+            <div class="flex items-center">
+                <img src="${details.image.large}" alt="${details.name} logo" class="w-10 h-10 mr-4 rounded-full">
+                <div>
+                    <h1 class="text-3xl font-bold">${details.name} (${details.symbol.toUpperCase()})</h1>
+                    <p class="text-2xl font-extrabold text-blue-500">${formatCurrency(details.market_data.current_price[appState.preferences.currency])}</p>
+                </div>
+            </div>
+            <button onclick="toggleFavorite('${coinId}')" class="p-2 rounded-full neo-card hover:shadow-xl transition-shadow">
+                <i data-lucide="star" class="w-6 h-6 ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'}"></i>
+            </button>
+        </div>
+        <div class="neo-card p-6">
+            <h2 class="text-xl font-bold mb-4">Price Chart (Last 30 Days)</h2>
+            <canvas id="coinChart" class="w-full h-96"></canvas>
+        </div>
+    `;
+    document.getElementById('app').innerHTML = renderLayout(content);
+    lucide.createIcons();
+
+    if(chartData?.prices){
+        renderChart('coinChart', chartData.prices, `${details.name} Price History`);
+    } else {
+        showToast('Could not load chart data.', 'error');
+    }
+}
