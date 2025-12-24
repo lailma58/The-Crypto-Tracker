@@ -1,0 +1,205 @@
+const BASE_URL = 'https://api.coingecko.com/api/v3';
+
+export const fetchCoinsByIds = async (ids, currency = 'usd') => {
+    const url = `${BASE_URL}/coins/markets?vs_currency=${currency}&ids=${ids}&sparkline=false`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching coins by IDs:', error);
+        return [];
+    }
+};
+
+export const fetchTopCoins = async (currency = 'usd', page = 1, perPage = 50, sort = 'market_cap_desc') => {
+    const url = `${BASE_URL}/coins/markets?vs_currency=${currency}&order=${sort}&per_page=${perPage}&page=${page}&sparkline=false&locale=en`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching top coins:", error);
+        return [];
+    }
+};
+
+export const fetchCoinDetails = async (coinId) => {
+    const url = `${BASE_URL}/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error(`Error fetching details for ${coinId}:`, error);
+        return null;
+    }
+};
+
+export const fetchCoinMarketChart = async (coinId, currency = 'usd', days = 365) => {
+    const url = `${BASE_URL}/coins/${coinId}/market_chart?vs_currency=${currency}&days=${days}`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error(`Error fetching market chart for ${coinId}:`, error);
+        return null;
+    }
+};
+
+export const fetchSimplePrice = async (ids, vsCurrencies) => {
+    const url = `${BASE_URL}/simple/price?ids=${ids}&vs_currencies=${vsCurrencies}`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching simple price:", error);
+        return null;
+    }
+};
+
+export const fetchCoinList = async () => {
+    const url = `${BASE_URL}/coins/list`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching coin list:", error);
+        return [];
+    }
+};
+
+export const fetchVsCurrencies = async () => {
+    const url = `${BASE_URL}/simple/supported_vs_currencies`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching supported vs currencies:", error);
+        return [];
+    }
+};
+
+export const fetchGlobalMarketData = async () => {
+    const url = `${BASE_URL}/global`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        return data.data;
+    } catch (error) {
+        console.error("Error fetching global market data:", error);
+        return null;
+    }
+};
+
+export const fetchAdvancedAnalytics = async () => {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const fearAndGreedIndex = Math.floor(Math.random() * 100);
+    let indexSentiment = '';
+    if (fearAndGreedIndex < 25) indexSentiment = 'Extreme Fear';
+    else if (fearAndGreedIndex < 50) indexSentiment = 'Fear';
+    else if (fearAndGreedIndex < 75) indexSentiment = 'Greed';
+    else indexSentiment = 'Extreme Greed';
+    
+    const fundingRateValue = (Math.random() * (0.05 - (-0.05)) + (-0.05));
+    const mockData = {
+        bitcoin: {
+            hashRate: {
+                value: (Math.random() * (700 - 500) + 500).toFixed(2),
+                unit: 'EH/s',
+                change24h: (Math.random() * 5 - 2).toFixed(2),
+                description: "The total computational power securing the Bitcoin network."
+            },
+            whaleTransactions: {
+                count: Math.floor(Math.random() * (1500 - 800) + 800),
+                unit: 'transactions (> $1M)',
+                change24h: (Math.random() * 10 - 5).toFixed(2),
+                description: "Number of transactions exceeding $1,000,000, often signaling institutional movement."
+            },
+            fundingRate: {
+                value: fundingRateValue.toFixed(4),
+                unit: '%',
+                description: "Fee paid between long and short perpetual contract traders; positive means longs pay shorts."
+            }
+        },
+        marketSentiment: {
+            fearAndGreed: {
+                index: fearAndGreedIndex,
+                sentiment: indexSentiment,
+                description: "A gauge of market emotion. 0 = Extreme Fear, 100 = Extreme Greed."
+            },
+            socialVolume: {
+                value: Math.floor(Math.random() * (50000 - 20000) + 20000),
+                unit: 'Mentions/Day',
+                change24h: (Math.random() * 20 - 10).toFixed(2),
+                description: "Aggregate volume of crypto mentions across major social media platforms."
+            }
+        },
+        global: {
+            dominance: {
+                bitcoin: (Math.random() * (55 - 45) + 45).toFixed(2),
+                ethereum: (Math.random() * (20 - 15) + 15).toFixed(2),
+                description: "Bitcoin and Ethereum's percentage share of the total crypto market capitalization."
+            }
+        }
+    };
+    
+    return mockData;
+};
+
+export const fetchNewsArticles = async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const newsData = [
+        {
+            id: 1,
+            title: "Bitcoin Surges Past $40k: Macro-Economic Factors Driving the Rally",
+            source: "CoinDesk",
+            date: new Date(Date.now() - 3600000),
+            summary: "Analysis points to institutional adoption and weakening dollar contributing to the sharp increase in BTC price.",
+            tags: ["Bitcoin", "Macro", "Analysis"],
+            link: "#"
+        },
+        {
+            id: 2,
+            title: "Ethereum's Dencun Upgrade: What Developers Need to Know About EIP-4844",
+            source: "The Block",
+            date: new Date(Date.now() - 5 * 3600000),
+            summary: "The latest Ethereum upgrade is set to significantly reduce Layer 2 transaction fees through 'blobs'.",
+            tags: ["Ethereum", "Upgrade", "Tech"],
+            link: "#"
+        },
+        {
+            id: 3,
+            title: "Shiba Inu Community Burns Record Tokens Following Exchange Listing Hype",
+            source: "Decrypt",
+            date: new Date(Date.now() - 24 * 3600000),
+            summary: "Meme coin SHIB sees renewed interest as social sentiment spikes and tokens are permanently removed from circulation.",
+            tags: ["Meme", "Shiba Inu", "Community"],
+            link: "#"
+        },
+        {
+            id: 4,
+            title: "Regulators Eye DeFi Lending Protocols: Impact on Stablecoins",
+            source: "CoinDesk",
+            date: new Date(Date.now() - 3 * 24 * 3600000),
+            summary: "Increased scrutiny from global financial bodies could lead to stricter KYC/AML rules for decentralized finance.",
+            tags: ["DeFi", "Regulation", "Stablecoin"],
+            link: "#"
+        },
+        {
+            id: 5,
+            title: "Solana Transaction Volume Hits All-Time High, Network Holds Steady",
+            source: "General",
+            date: new Date(Date.now() - 7 * 24 * 3600000),
+            summary: "The Solana network demonstrated resilience during the surge, suggesting capacity improvements are paying off.",
+            tags: ["Solana", "Ecosystem", "Volume"],
+            link: "#"
+        },
+    ];
+    return newsData;
+};
