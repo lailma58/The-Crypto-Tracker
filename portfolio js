@@ -1,0 +1,214 @@
+import { fetchCoinList, fetchCoinsByIds } from './apiService.js';
+import { getCurrentUser, getUserPreferences, formatCurrency } from './utils.js';
+
+let allCoinsList = [];
+let currentHoldings = [];
+let currentPrices = {};
+
+const coinSelect = document.getElementById('coin-select');
+const amountInput = document.getElementById('amount-input');
+const purchasePriceInput = document.getElementById('purchase-price-input');
+const addHoldingForm = document.getElementById('add-holding-form');
+const holdingsListBody = document.getElementById('holdings-list');
+const totalValueElement = document.getElementById('total-value');
+const totalPnlElement = document.getElementById('total-pnl');
+const chartPlaceholder = document.getElementById('chart-placeholder');
+
+let allocationChart = null;
+let userPrefs;
+let currentUserEmail;
+
+const getHoldings = () => {
+    const json = localStorage.getItem(`cryptoTracker_holdings_${currentUserEmail}`);
+    return json ? JSON.parse(json) : [];
+};
+
+const saveHoldings = () => {
+    localStorage.setItem(`cryptoTracker_holdings_${currentUserEmail}`, JSON.stringify(currentHoldings));
+};
+
+const populateCoinSelect = (coins) => {
+    coinSelect.innerHTML = '<option value="">Select a Coin</option>';
+    coins.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c.id;
+        option.textContent = `${c.name} (${c.symbol.toUpperCase()})`;
+        coinSelect.appendChild(option);
+    });
+};
+
+const fetchCurrentPrices = async () => {
+    if (currentHoldings.length === 0) return;
+    const coinIds = currentHoldings.map(h => h.id).join(',');
+    const currency = (userPrefs?.currency || 'USD').toLowerCase();
+
+    try {
+        const prices = await fetchCoinsByIds(coinIds, currency);
+        currentPrices = prices.reduce((acc, coin) => {
+            acc[coin.id] = coin.current_price;
+            return acc;
+        }, {});
+    } catch (err) {
+        console.error('Error fetching prices:', err);
+        currentPrices = {};
+    }
+};
+
+const renderSummary = () => {
+    let totalValue = 0;
+    let totalPnl = 0;
+    const currency = (userPrefs?.currency || 'USD');
+
+    currentHoldings.forEach(h => {
+        const price = currentPrices[h.id] || 0;
+        h.currentValue = h.amount * price;
+        h.pnl = (price - h.purchasePrice) * h.amount;
+        totalValue += h.currentValue;
+        totalPnl += h.pnl;
+    });
+
+    currentHoldings.forEach(h => {
+        h.portfolioPercent = totalValue > 0 ? (h.currentValue / totalValue) * 100 : 0;
+    });
+
+    totalValueElement.textContent = formatCurrency(totalValue, currency);
+    totalPnlElement.innerHTML = `<span class="${totalPnl >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(totalPnl, currency)}</span>`;
+
+    renderHoldingsTable(currentHoldings);
+    renderAllocationChart(currentHoldings, totalValue);
+};
+
+const renderHoldingsTable = (holdings) => {
+    if (!holdings.length) {
+        holdingsListBody.innerHTML = '<tr><td colspan="8" class="loading-message">No holdings added yet.</td></tr>';
+        return;
+    }
+
+    const currency = (userPrefs?.currency || 'USD');
+
+    holdingsListBody.innerHTML = holdings.map(h => {
+        const coin = allCoinsList.find(c => c.id === h.id) || { name: 'Unknown', symbol: '?' };
+        return `
+            <tr>
+                <td>${coin.name} (${coin.symbol.toUpperCase()})</td>
+                <td>${h.amount.toFixed(4)}</td>
+                <td>${formatCurrency(currentPrices[h.id] || 0, currency)}</td>
+                <td>${formatCurrency(h.currentValue, currency)}</td>
+                <td>${formatCurrency(h.purchasePrice, currency)}</td>
+                <td class="${h.pnl >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(h.pnl, currency)}</td>
+                <td>${h.portfolioPercent.toFixed(1)}%</td>
+                <td><button class="btn btn-danger btn-small remove-holding-btn" data-id="${h.id}">Remove</button></td>
+            </tr>
+        `;
+    }).join('');
+};
+
+holdingsListBody.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-holding-btn')) {
+        const id = e.target.dataset.id;
+        if (!confirm("Do you want to remove this holding?")) return;
+        currentHoldings = currentHoldings.filter(h => h.id !== id);
+        saveHoldings();
+        initPortfolioData();
+    }
+});
+
+const renderAllocationChart = (holdings, totalValue) => {
+    const ctx = document.getElementById('allocationChart').getContext('2d');
+    if (allocationChart) allocationChart.destroy();
+
+    if (totalValue === 0) {
+        chartPlaceholder.style.display = 'block';
+        return;
+    }
+
+    chartPlaceholder.style.display = 'none';
+    const labels = holdings.map(h => allCoinsList.find(c => c.id === h.id)?.name || h.id);
+    const data = holdings.map(h => h.currentValue);
+    const colors = ['#3498db','#f39c12','#2ecc71','#e74c3c','#9b59b6','#34495e','#1abc9c','#f1c40f'];
+
+    allocationChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, holdings.length), hoverOffset: 10 }] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                title: { display: true, text: 'Portfolio Allocation', font: { size: 16 } },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
+                            return `${context.label}: ${formatCurrency(value, userPrefs.currency)} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+};
+
+const handleAddHolding = (e) => {
+    e.preventDefault();
+
+    const id = coinSelect.value;
+    const amount = parseFloat(amountInput.value);
+    const purchasePrice = parseFloat(purchasePriceInput.value);
+
+    if (!id || isNaN(amount) || isNaN(purchasePrice) || amount <= 0 || purchasePrice <= 0) {
+        document.getElementById('form-message').textContent = 'Please enter valid values.';
+        document.getElementById('form-message').className = 'status-text error';
+        return;
+    }
+
+    const existing = currentHoldings.find(h => h.id === id);
+
+    if (existing) {
+        const newTotal = existing.amount + amount;
+        existing.purchasePrice = ((existing.amount * existing.purchasePrice) + (amount * purchasePrice)) / newTotal;
+        existing.amount = newTotal;
+        document.getElementById('form-message').textContent = 'Holding updated.';
+    } else {
+        currentHoldings.push({ id, amount, purchasePrice });
+        document.getElementById('form-message').textContent = 'Holding added.';
+    }
+
+    document.getElementById('form-message').className = 'status-text success';
+    saveHoldings();
+    initPortfolioData();
+
+    coinSelect.value = '';
+    amountInput.value = '';
+    purchasePriceInput.value = '';
+};
+
+const initPortfolioData = async () => {
+    currentHoldings = getHoldings();
+    await fetchCurrentPrices();
+    renderSummary();
+};
+
+const initPortfolioPage = async () => {
+    const currentUser = getCurrentUser();
+    if (!currentUser) return (window.location.href = 'index.html');
+
+    currentUserEmail = currentUser.email;
+    userPrefs = getUserPreferences(currentUserEmail) || { currency: 'USD', theme: 'dark' };
+    document.documentElement.setAttribute('data-theme', userPrefs.theme);
+
+    const coinList = await fetchCoinList();
+    if (coinList.length > 0) {
+        allCoinsList = coinList;
+        populateCoinSelect(coinList.slice(0, 50));
+    } else {
+        coinSelect.innerHTML = '<option value="">Error loading coins</option>';
+    }
+
+    addHoldingForm.addEventListener('submit', handleAddHolding);
+    await initPortfolioData();
+};
+
+initPortfolioPage();
