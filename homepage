@@ -1,0 +1,133 @@
+import { fetchTopCoins, fetchGlobalMarketData } from './apiService.js';
+import { getAiRecommendations } from './aiRecommender.js';
+import { getCurrentUser, getUserPreferences, formatCurrency } from './utils.js';
+
+const recommendationsContainer = document.getElementById('ai-recommendations-list');
+const greetingElement = document.getElementById('greeting');
+const globalStatsContainer = document.getElementById('global-stats-data'); 
+
+const renderGlobalStats = (globalData, currency) => {
+    if (!globalData || !globalData.total_market_cap) {
+        globalStatsContainer.innerHTML = '<p>Global market data could not be loaded.</p>';
+        return;
+    }
+    
+    const currencyKey = currency.toLowerCase();
+    
+    if (!globalData.total_market_cap[currencyKey] || !globalData.total_volume[currencyKey]) {
+         globalStatsContainer.innerHTML = '<p>Market cap data not available for the selected currency.</p>';
+         return;
+    }
+
+    const marketCap = globalData.total_market_cap[currencyKey];
+    const totalVolume = globalData.total_volume[currencyKey];
+    const btcDominance = globalData.market_cap_percentage.btc;
+    const activeCryptos = globalData.active_cryptocurrencies;
+    
+    const marketCapHtml = formatCurrency(marketCap, currency, true);
+    const volumeHtml = formatCurrency(totalVolume, currency, true);
+    
+    globalStatsContainer.innerHTML = `
+        <div class="stats-grid">
+            <div class="stat-item">
+                <small>Total Market Cap:</small>
+                <p class="stat-value">${marketCapHtml}</p>
+            </div>
+            <div class="stat-item">
+                <small>24h Total Volume:</small>
+                <p class="stat-value">${volumeHtml}</p>
+            </div>
+            <div class="stat-item">
+                <small>Bitcoin Dominance:</small>
+                <p class="stat-value">${btcDominance.toFixed(2)}%</p>
+            </div>
+            <div class="stat-item">
+                <small>Active Cryptocurrencies:</small>
+                <p class="stat-value">${activeCryptos.toLocaleString()}</p>
+            </div>
+        </div>
+    `;
+};
+
+const renderRecommendations = (coins, currency) => {
+    if (coins.length === 0) {
+        recommendationsContainer.innerHTML = '<p class="card" style="padding: 15px;">Could not generate recommendations or no positive trends found in the top 10.</p>';
+        return;
+    }
+    
+    let html = '';
+    const priceFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase(), minimumFractionDigits: 2 });
+
+    coins.forEach((coin, index) => {
+        const formattedPrice = priceFormatter.format(coin.currentPrice);
+        
+        html += `
+            <div class="recommendation-card card">
+                <h4>#${index + 1} Recommendation: ${coin.name} (${coin.symbol.toUpperCase()})</h4>
+                <div class="flex-group" style="align-items: flex-start;">
+                    <img src="${coin.image}" alt="${coin.name} logo" width="32" height="32" style="margin-right: 15px;">
+                    <div>
+                        <p><strong>Price:</strong> ${formattedPrice}</p>
+                        <p class="rationale-text">
+                            <strong>Rationale:</strong> ${coin.rationale} 
+                        </p>
+                    </div>
+                </div>
+                <a href="coin.html?id=${coin.id}" class="btn btn-primary btn-small" style="margin-top: 10px;">View Details</a>
+            </div>
+        `;
+    });
+    recommendationsContainer.innerHTML = html;
+};
+
+const renderTrendingCoins = (coins, currency) => {
+    const trendingCoins = coins.slice(0, 5); 
+    const priceFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase(), minimumFractionDigits: 2 });
+
+    const trendingHtml = trendingCoins.map(coin => {
+        const change = coin.price_change_percentage_24h;
+        const changeClass = change >= 0 ? 'text-success' : 'text-danger';
+
+        return `
+            <a href="coin.html?id=${coin.id}" class="trending-card card">
+                <img src="${coin.image}" alt="${coin.name} logo" width="32" height="32">
+                <h4>${coin.name}</h4>
+                <p>${priceFormatter.format(coin.current_price)}</p>
+                <span class="${changeClass}">
+                    ${change >= 0 ? '+' : ''}${change.toFixed(2)}%
+                </span>
+            </a>
+        `;
+    }).join('');
+    document.getElementById('trending-coins').innerHTML = trendingHtml;
+}
+
+const initHomepage = async () => {
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    const userPrefs = getUserPreferences(currentUser.email);
+    document.documentElement.setAttribute('data-theme', userPrefs.theme);
+    
+    greetingElement.textContent = `Hello, ${currentUser.email.split('@')[0]}!`;
+    
+    globalStatsContainer.innerHTML = '<p>Fetching global market overview...</p>';
+    const globalData = await fetchGlobalMarketData();
+    renderGlobalStats(globalData, userPrefs.currency);
+
+    const topCoins = await fetchTopCoins(userPrefs.currency, 1, 10, 'market_cap_desc');
+    
+    if (topCoins.length > 0) {
+        const recommendations = await getAiRecommendations(topCoins, userPrefs.currency);
+        renderRecommendations(recommendations, userPrefs.currency);
+        renderTrendingCoins(topCoins, userPrefs.currency);
+    } else {
+        recommendationsContainer.innerHTML = '<p class="card">Failed to fetch top coin data.</p>';
+        document.getElementById('trending-coins').innerHTML = '<p>Could not load trending data.</p>';
+    }
+};
+
+initHomepage();
