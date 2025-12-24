@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Portfolio | Crypto Tracker</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+body{
+font-family:'Inter',sans-serif;
+background:linear-gradient(135deg,#000428,#004e92);
+min-height:100vh;
+color:#e9faff;
+overflow-x:hidden;
+}
+
+.glow-one,.glow-two{
+position:fixed;
+width:550px;
+height:550px;
+z-index:-1;
+border-radius:50%;
+filter:blur(150px);
+opacity:.7;
+}
+.glow-one{
+background:radial-gradient(circle,rgba(0,200,255,.6),transparent 70%);
+top:-120px;
+left:-120px;
+animation:float1 12s ease-in-out infinite alternate;
+}
+.glow-two{
+background:radial-gradient(circle,rgba(255,0,200,.5),transparent 70%);
+bottom:-120px;
+right:-120px;
+animation:float2 15s ease-in-out infinite alternate;
+}
+
+@keyframes float1{from{transform:translate(-40px,-20px);}to{transform:translate(40px,20px);}}
+@keyframes float2{from{transform:translate(40px,40px);}to{transform:translate(-40px,-40px);}}
+
+.glass-card{
+backdrop-filter:blur(20px);
+background:rgba(255,255,255,.05);
+border:1px solid rgba(255,255,255,.2);
+box-shadow:0 0 25px rgba(0,0,0,.2);
+transition:.3s;
+}
+.glass-card:hover{
+transform:translateY(-3px);
+box-shadow:0 0 35px rgba(0,255,255,.3);
+}
+
+select,select option{
+color:#000!important;
+background:#fff!important;
+}
+
+#add-holding-card{margin-bottom:2rem;overflow:visible!important;}
+#coin-select{
+margin-bottom:.5rem;
+width:100%;
+padding:.75rem 1rem;
+border-radius:12px;
+border:none;
+outline:none;
+background:#fff;
+color:#000;
+font-weight:600;
+box-shadow:0 0 8px rgba(0,0,0,.1);
+}
+
+header{
+backdrop-filter:blur(20px);
+background:rgba(255,255,255,.15);
+border:1px solid rgba(255,255,255,.2);
+border-radius:20px;
+padding:15px 25px;
+margin:10px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+position:sticky;
+top:0;
+z-index:10;
+}
+header nav a{color:#00eaff;text-decoration:none;margin-right:20px;font-weight:500;transition:.3s;}
+header nav a:hover{color:#92FE9D;text-shadow:0 0 8px rgba(0,255,255,.6);}
+
+#logout-btn{
+background:linear-gradient(135deg,#ff0055,#ff4d4d);
+padding:10px 15px;
+border-radius:12px;
+border:none;
+color:#fff;
+font-weight:500;
+cursor:pointer;
+transition:.3s;
+margin-left:10px;
+box-shadow:0 4px 15px rgba(255,50,100,.4);
+}
+#logout-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,50,100,.6);}
+</style>
+</head>
+
+<body>
+<div class="glow-one"></div>
+<div class="glow-two"></div>
+
+<header id="main-header">
+<nav>
+<a href="home.html">Home</a>
+<a href="dashboard.html">Dashboard</a>
+<a href="portfolio.html">Portfolio</a>
+<a href="compare.html">Compare</a>
+<a href="favorites.html">Favorites</a>
+<a href="news.html">News</a>
+<a href="settings.html">Settings</a>
+</nav>
+<button id="logout-btn" onclick="logout()">Logout</button>
+</header>
+
+<main class="container w-11/12 max-w-6xl mx-auto my-8">
+<h1 class="text-4xl font-extrabold mb-6 text-white">Portfolio</h1>
+
+<div class="grid md:grid-cols-2 gap-5 mt-5">
+<section class="glass-card rounded-2xl p-6">
+<h2 class="text-2xl font-semibold mb-4 text-white">Summary & Allocation</h2>
+<div id="portfolio-metrics" class="mb-5 text-lg">
+<p>Total Value: <strong id="total-value" class="text-green-400">$0.00</strong></p>
+<p>Total Profit/Loss: <strong id="total-pnl" class="text-yellow-400">Loading...</strong></p>
+</div>
+<div class="max-h-[300px] w-full relative">
+<canvas id="allocationChart"></canvas>
+</div>
+<p id="chart-placeholder" class="text-center text-gray-400 mt-5 italic hidden">Add holdings to see allocation.</p>
+</section>
+
+<section class="glass-card rounded-2xl p-6" id="add-holding-card">
+<h2 class="text-2xl font-semibold mb-4 text-white">Add New Holding</h2>
+<form id="add-holding-form" class="space-y-4">
+<div>
+<label for="coin-select" class="block mb-1 text-gray-200">Coin:</label>
+<select id="coin-select" required>
+<option value="">Loading coins...</option>
+</select>
+</div>
+
+<div>
+<label for="amount-input" class="block mb-1 text-gray-200">Amount Held:</label>
+<input type="number" id="amount-input" step="any" min="0.00000001"
+class="w-full p-3 rounded-xl bg-white/15 text-white" required />
+</div>
+
+<div>
+<label for="purchase-price-input" class="block mb-1 text-gray-200">Average Purchase Price (USD):</label>
+<input type="number" id="purchase-price-input" step="any" min="0.01"
+class="w-full p-3 rounded-xl bg-white/15 text-white" required />
+</div>
+
+<button type="submit" class="w-full py-3 rounded-xl text-white bg-gradient-to-r from-blue-400 to-blue-600">
+Add Holding
+</button>
+
+<p id="form-message" class="text-sm pt-2 text-cyan-300"></p>
+</form>
+</section>
+</div>
+
+<section class="glass-card rounded-2xl p-6 mt-8">
+<h2 class="text-2xl font-semibold mb-4 text-white">Current Holdings</h2>
+<div class="overflow-x-auto">
+<table class="min-w-full divide-y divide-white/10">
+<thead>
+<tr class="text-left text-gray-300 uppercase text-sm">
+<th class="py-3 px-4">Coin</th>
+<th class="py-3 px-4">Amount</th>
+<th class="py-3 px-4">Current Price</th>
+<th class="py-3 px-4">Total Value</th>
+<th class="py-3 px-4">Avg. Purchase Price</th>
+<th class="py-3 px-4">P/L</th>
+<th class="py-3 px-4">% of Portfolio</th>
+<th class="py-3 px-4">Action</th>
+</tr>
+</thead>
+<tbody id="holdings-list" class="divide-y divide-white/5">
+<tr><td colspan="8" class="text-center py-4 text-gray-400 italic">Loading holdings...</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+
+<footer class="text-center py-4 text-gray-400 mt-10">&copy; 2025 Crypto Tracker</footer>
+
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import{getAuth,onAuthStateChanged,signInAnonymously,signOut}from"https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import{getFirestore,collection,addDoc,doc,deleteDoc,onSnapshot}from"https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const firebaseConfig={apiKey:"AIzaSyAQMe4N46ClhPL2V9OLdH6Z7WbyAfPTrJE",authDomain:"the-crypto-tracker.firebaseapp.com",projectId:"the-crypto-tracker",storageBucket:"the-crypto-tracker.appspot.com",messagingSenderId:"588729139716",appId:"1:588729139716:web:cb1dd8b5965dc019e76b51"};
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+let userId;
+let holdingsData=[];
+let chartInstance;
+let currentPrices={};
+const colors=['#00f2ff','#92FE9D','#FF6FD8','#FF8C00','#FFA500','#FF69B4','#7CFC00','#00CED1'];
+
+window.logout=async()=>{await signOut(auth);location.href="index.html";};
+
+async function fetchCoinList(){
+const coins=[{symbol:"BTC",name:"Bitcoin"},{symbol:"ETH",name:"Ethereum"},{symbol:"SOL",name:"Solana"},{symbol:"XRP",name:"Ripple"},{symbol:"ADA",name:"Cardano"},{symbol:"DOGE",name:"Dogecoin"},{symbol:"DOT",name:"Polkadot"},{symbol:"LINK",name:"Chainlink"},{symbol:"LTC",name:"Litecoin"},{symbol:"BCH",name:"Bitcoin Cash"}];
+const select=document.getElementById("coin-select");
+select.innerHTML='<option value="">Select a Coin</option>';
+coins.forEach(c=>{const o=document.createElement("option");o.value=c.symbol;o.textContent=`${c.name} (${c.symbol})`;select.appendChild(o);});
+}
+
+async function getCurrentPrice(symbol){
+try{
+const map={BTC:'bitcoin',ETH:'ethereum',ADA:'cardano',SOL:'solana',XRP:'ripple',DOGE:'dogecoin',DOT:'polkadot',LINK:'chainlink',LTC:'litecoin',BCH:'bitcoin-cash'};
+const id=map[symbol];
+if(!id)return 0;
+const r=await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
+const d=await r.json();
+return d[id].usd||0;
+}catch{return 0;}
+}
+
+function initChart(){
+const ctx=document.getElementById("allocationChart").getContext("2d");
+chartInstance=new Chart(ctx,{type:"doughnut",data:{labels:[],datasets:[{data:[],backgroundColor:colors}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"white"},position:"right"}}}});
+}
+
+async function updatePortfolioMetrics(){
+if(!chartInstance)initChart();
+const body=document.getElementById("holdings-list");
+body.innerHTML="";
+let totalValue=0,totalCost=0;
+for(const h of holdingsData){
+const price=await getCurrentPrice(h.symbol);
+currentPrices[h.symbol]=price;
+const value=h.amount*price;
+const cost=h.amount*h.purchasePrice;
+const pnl=value-cost;
+totalValue+=value;
+totalCost+=cost;
+const r=document.createElement("tr");
+r.innerHTML=`<td class="py-3 px-4 text-white font-bold">${h.symbol}</td><td class="py-3 px-4 text-white">${h.amount}</td><td class="py-3 px-4 text-white">$${price.toLocaleString()}</td><td class="py-3 px-4 text-cyan-400">$${value.toLocaleString()}</td><td class="py-3 px-4 text-white">$${h.purchasePrice.toLocaleString()}</td><td class="py-3 px-4 ${pnl>=0?'text-green-400':'text-red-400'}">${pnl>=0?'▲':'▼'} $${Math.abs(pnl).toLocaleString()}</td><td class="py-3 px-4 text-white">${totalValue?((value/totalValue*100).toFixed(2))+"%":"0%"}</td><td class="py-3 px-4"><button class="delete-btn text-red-500" data-id="${h.id}">Delete</button></td>`;
+body.appendChild(r);
+}
+document.getElementById("total-value").textContent="$"+totalValue.toLocaleString();
+document.getElementById("total-pnl").textContent="$"+(totalValue-totalCost).toLocaleString();
+chartInstance.data.labels=holdingsData.map(h=>h.symbol);
+chartInstance.data.datasets[0].data=holdingsData.map(h=>h.amount*currentPrices[h.symbol]);
+chartInstance.update();
+}
+
+async function deleteHolding(id){
+holdingsData=holdingsData.filter(h=>h.id!==id);
+updatePortfolioMetrics();
+await deleteDoc(doc(db,`users/${userId}/cryptoHoldings`,id));
+}
+
+document.getElementById("holdings-list").onclick=e=>{
+if(e.target.classList.contains("delete-btn")){
+const id=e.target.dataset.id;
+confirm("Delete this holding?")&&deleteHolding(id);
+}
+};
+
+document.getElementById("add-holding-form").onsubmit=async e=>{
+e.preventDefault();
+const symbol=document.getElementById("coin-select").value;
+const amount=parseFloat(document.getElementById("amount-input").value);
+const price=parseFloat(document.getElementById("purchase-price-input").value);
+const msg=document.getElementById("form-message");
+if(!symbol||amount<=0||price<=0){msg.textContent="Please enter valid data.";msg.style.color="tomato";return;}
+try{await addDoc(collection(db,`users/${userId}/cryptoHoldings`),{symbol,amount,purchasePrice:price});msg.textContent="Holding added!";msg.style.color="#7FFF00";}
+catch{msg.textContent="Error adding holding.";msg.style.color="tomato";}
+};
+
+onAuthStateChanged(auth,async u=>{
+if(u){
+userId=u.uid;
+await fetchCoinList();
+onSnapshot(collection(db,`users/${userId}/cryptoHoldings`),s=>{
+holdingsData=s.docs.map(d=>({id:d.id,...d.data()}));
+updatePortfolioMetrics();
+});
+}else await signInAnonymously(auth);
+});
+
+initChart();
+</script>
+</body>
+</html>
