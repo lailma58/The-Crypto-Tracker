@@ -1,0 +1,70 @@
+export const registerServiceWorker = () => {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/serviceWorker.js')
+                .then(registration => console.log('Service Worker registered with scope:', registration.scope))
+                .catch(err => console.error('Service Worker registration failed:', err));
+        });
+    }
+};
+
+registerServiceWorker();
+
+const DEFAULT_PREFERENCES = {
+    theme: 'light',
+    currency: 'usd',
+    chartStyle: 'line',
+};
+
+export const getInitialPreferences = () => ({ ...DEFAULT_PREFERENCES });
+
+export const getUserPreferences = (email) => {
+    const prefsJson = localStorage.getItem(`cryptoTracker_prefs_${email}`);
+    return prefsJson ? JSON.parse(prefsJson) : getInitialPreferences();
+};
+
+export const saveUserPreferences = (email, prefs) => {
+    localStorage.setItem(`cryptoTracker_prefs_${email}`, JSON.stringify(prefs));
+};
+
+export const formatCurrency = (value, currency, compact = false) => {
+    if (value === null || value === undefined) return 'N/A';
+    
+    const options = {
+        style: 'currency',
+        currency: currency.toUpperCase(),
+        minimumFractionDigits: value >= 1000 ? 0 : 2,
+        maximumFractionDigits: value >= 1000 ? 0 : 2,
+    };
+
+    if (compact) {
+        options.notation = 'compact';
+        options.compactDisplay = 'short';
+    }
+
+    try {
+        return new Intl.NumberFormat('en-US', options).format(value);
+    } catch (e) {
+        console.error("Error formatting currency:", e);
+        return `${currency.toUpperCase()} ${value.toFixed(2)}`;
+    }
+};
+
+export const formatNumber = (value) => {
+    if (value === null || value === undefined) return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+        maximumFractionDigits: 0,
+        notation: 'compact',
+    }).format(value);
+};
+
+export const formatPercentage = (value, showSign = true) => {
+    if (value === null || value === undefined) return 'N/A';
+    const sign = showSign && value > 0 ? '+' : '';
+    return `${sign}${value.toFixed(2)}%`;
+};
+
+export const getUrlParameter = (name) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+};
