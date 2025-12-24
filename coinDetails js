@@ -1,0 +1,162 @@
+import { fetchCoinDetails, fetchCoinMarketChart } from './apiService.js';
+import { getCurrentUser, getUserPreferences, getUrlParameter, formatCurrency, formatPercentage } from './utils.js';
+
+let chartInstance = null;
+let coinId;
+let userPrefs;
+
+const chartContainer = document.getElementById('priceChart');
+const chartControls = document.getElementById('chart-controls');
+const chartStatus = document.getElementById('chart-status');
+const marketDataGrid = document.getElementById('market-data-grid');
+
+const renderCoinHeader = (details) => {
+    const headerContainer = document.getElementById('coin-info-top');
+    const currency = userPrefs.currency.toLowerCase();
+
+    const marketData = details.market_data;
+    const currentPrice = marketData.current_price[currency];
+    const priceChange24h = marketData.price_change_percentage_24h_in_currency[currency];
+    const changeClass = priceChange24h >= 0 ? 'text-success' : 'text-danger';
+    const formattedPrice = formatCurrency(currentPrice, currency, false);
+    const formattedChange = formatPercentage(priceChange24h);
+
+    document.getElementById('coin-page-title').textContent = `${details.name} Price & Details | Crypto Tracker`;
+
+    headerContainer.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <img src="${details.image.large}" alt="${details.name} logo" width="50" height="50">
+                <div>
+                    <h1>${details.name} (${details.symbol.toUpperCase()})</h1>
+                    <p style="color: var(--color-text-secondary);">Rank #${details.market_cap_rank}</p>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <p style="font-size: 2.5em; font-weight: bold; margin: 0;">${formattedPrice}</p>
+                <p class="${changeClass}" style="font-size: 1.2em; margin: 0;">${formattedChange} (24h)</p>
+            </div>
+        </div>
+    `;
+};
+
+const renderMarketData = (marketData) => {
+    const currency = userPrefs.currency.toLowerCase();
+
+    const metrics = [
+        { title: 'Market Cap', value: marketData.market_cap[currency], compact: true },
+        { title: '24h Volume', value: marketData.total_volume[currency], compact: true },
+        { title: 'Circulating Supply', value: marketData.circulating_supply, compact: true, isSupply: true },
+        { title: 'All-Time High (ATH)', value: marketData.ath[currency], compact: false },
+        { title: 'ATH Change', value: marketData.ath_change_percentage[currency], compact: false, isPercent: true, isNegative: true },
+        { title: '24h Low / High', value: `${formatCurrency(marketData.low_24h[currency], currency)} / ${formatCurrency(marketData.high_24h[currency], currency)}` },
+    ];
+
+    const html = metrics.map(metric => {
+        let displayValue;
+        let pnlClass = '';
+
+        if (metric.isSupply) {
+            displayValue = metric.value ? metric.value.toLocaleString('en-US', { maximumFractionDigits: 0 }) : 'N/A';
+        } else if (metric.value && metric.isPercent) {
+            displayValue = formatPercentage(metric.value, true);
+            pnlClass = metric.value < 0 ? 'text-danger' : 'text-success';
+        } else if (metric.value && typeof metric.value === 'number') {
+            displayValue = formatCurrency(metric.value, currency, metric.compact);
+        } else {
+            displayValue = metric.value || 'N/A';
+        }
+        
+        if (metric.title.includes('ATH Change')) {
+            pnlClass = 'text-danger';
+            displayValue = formatPercentage(metric.value, false);
+        }
+
+        return `
+            <div class="card" style="padding: 15px; border-left: 4px solid var(--color-accent);">
+                <small>${metric.title}</small>
+                <p class="stat-value ${pnlClass}" style="font-size: 1.3em;">${displayValue}</p>
+            </div>
+        `;
+    }).join('');
+
+    marketDataGrid.innerHTML = html;
+};
+
+const renderDescription = (descriptionHtml, coinName) => {
+    const descriptionContent = document.getElementById('coin-description-content');
+    document.getElementById('coin-name-desc').textContent = coinName;
+    
+    if (descriptionHtml && descriptionHtml.length > 0) {
+        const maxLength = 800;
+        let text = descriptionHtml;
+        
+        if (text.length > maxLength) {
+            text = text.substring(0, maxLength) + '... <a href="#" onclick="return false;" style="color: var(--color-primary);">Read more</a>';
+        }
+        
+        descriptionContent.innerHTML = text;
+    } else {
+        descriptionContent.innerHTML = '<p>No detailed description available for this coin.</p>';
+    }
+};
+
+const renderPriceChart = (prices, days) => {
+    chartStatus.textContent = '';
+    
+    if (!prices || prices.length === 0) {
+        chartStatus.textContent = 'No historical data available for this range.';
+        if (chartInstance) chartInstance.destroy();
+        return;
+    }
+
+    const labels = prices.map(p => p[0]);
+    const data = prices.map(p => p[1]);
+
+    const initialPrice = data[0];
+    const finalPrice = data[data.length - 1];
+    const isBullish = finalPrice >= initialPrice;
+    
+    const lineColor = isBullish ? userPrefs.theme === 'dark' ? '#45b78f' : '#2ecc71' : userPrefs.theme === 'dark' ? '#c0392b' : '#e74c3c';
+    const chartType = userPrefs.chartStyle;
+
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+
+    const ctx = chartContainer.getContext('2d');
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, isBullish ? 'rgba(46, 204, 113, 0.5)' : 'rgba(231, 76, 60, 0.5)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    chartInstance = new Chart(ctx, {
+        type: chartType,
+        data: {
+            labels: labels,
+            datasets: [{
+                label: `${coinId.toUpperCase()} Price (${userPrefs.currency.toUpperCase()})`,
+                data: data,
+                borderColor: lineColor,
+                backgroundColor: chartType === 'line' ? gradient : lineColor,
+                fill: chartType === 'line' ? true : false,
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                borderWidth: chartType === 'line' ? 2 : 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    type: 'time',
+                    adapters: { date: Chart.adapters.date },
+                    time: { unit: days <= 1 ? 'hour' : (days <= 90 ? 'day' : 'month'), tooltipFormat: 'MMM DD, YYYY HH:mm' },
+                    title: { display: true, text: 'Date' }
+                },
+                y: {
+                    title: { display: true, text: `Price (${userPrefs.currency.toUpperCase()})` },
+                    ticks: { callback: function(value) { return formatCurrency(value, userPrefs.currency).replace(/\s+/g, ''); } }
