@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compare Coins | Crypto Tracker</title>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAQMe4N46ClhPL2V9OLdH6Z7WbyAfPTrJE",
+    authDomain: "the-crypto-tracker.firebaseapp.com",
+    projectId: "the-crypto-tracker",
+    storageBucket: "the-crypto-tracker.firebasestorage.app",
+    messagingSenderId: "588729139716",
+    appId: "1:588729139716:web:cb1dd8b5965dc019e76b51"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, user => {
+    if (!user) window.location.href = "login.html";
+  });
+
+  window.logout = async () => {
+    if (confirm("Are you sure you want to logout?")) {
+      await signOut(auth);
+      window.location.href = "login.html";
+    }
+  };
+</script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Poppins",sans-serif;}
+body{background:linear-gradient(135deg,#000428,#004e92);min-height:100vh;color:#e9faff;overflow-x:hidden;}
+header{backdrop-filter:blur(20px);background:rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.2);padding:15px 25px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;border-radius:15px;margin:10px;}
+header nav a{color:#00f2ff;text-decoration:none;margin-right:20px;font-weight:500;transition:0.3s;}
+header nav a:hover{color:#92FE9D;text-shadow:0 0 8px rgba(0,255,255,0.6);}
+#logout-btn{background:linear-gradient(135deg,#ff0055,#ff4d4d);padding:10px 15px;border-radius:12px;border:none;color:#fff;font-weight:500;cursor:pointer;transition:0.3s;box-shadow:0 4px 15px rgba(255,50,100,0.4);}
+#logout-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,50,100,0.6);}
+
+.container{width:95%;max-width:100%;margin:20px auto 60px auto;}
+.card{backdrop-filter:blur(20px);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.2);border-radius:18px;padding:20px;margin-bottom:20px;}
+.flex-group{display:flex;gap:10px;flex-wrap:wrap;}
+.flex-group div{flex:1;min-width:150px;}
+select{width:100%;padding:10px;border-radius:10px;background:rgba(255,255,255,0.15);border:none;color:#000;}
+button.btn{padding:12px 18px;border:none;border-radius:12px;background:linear-gradient(135deg,#00d4ff,#0077ff);color:#fff;font-weight:500;cursor:pointer;}
+canvas{background:rgba(255,255,255,0.05);border-radius:10px;margin-top:20px;display:block;width:100% !important;height:80vh !important;}
+</style>
+</head>
+
+<body>
+<header>
+<nav>
+  <a href="home.html">Home</a>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="portfolio.html">Portfolio</a>
+  <a href="compare.html">Compare</a>
+  <a href="favorites.html">Favorites</a>
+  <a href="news.html">News</a>
+  <a href="settings.html">Settings</a>
+</nav>
+<button id="logout-btn" onclick="logout()">Logout</button>
+</header>
+
+<main class="container">
+<h1>Coin Comparison Tool</h1>
+
+<section class="card" id="comparison-controls">
+<h2>Select Coins</h2>
+<form id="compare-form" class="flex-group">
+<div>
+<label for="coin-select-1">Coin 1:</label>
+<select id="coin-select-1" required><option>Loading...</option></select>
+</div>
+
+<div>
+<label for="coin-select-2">Coin 2:</label>
+<select id="coin-select-2" required><option>Loading...</option></select>
+</div>
+
+<div>
+<label for="time-range-select">Time Range:</label>
+<select id="time-range-select">
+  <option value="7">7 Days</option>
+  <option value="30" selected>30 Days</option>
+  <option value="90">90 Days</option>
+  <option value="365">1 Year</option>
+</select>
+</div>
+
+<button type="submit" class="btn">Compare</button>
+</form>
+<p id="comparison-message" class="status-text"></p>
+</section>
+
+<section id="comparison-results" class="card" style="display:none;">
+<h2>Coin Comparison Chart</h2>
+<canvas id="chart"></canvas>
+</section>
+</main>
+
+<footer>&copy; 2025 Crypto Tracker</footer>
+
+<script>
+let chartInstance = null;
+
+const coinSelect1 = document.getElementById("coin-select-1");
+const coinSelect2 = document.getElementById("coin-select-2");
+const timeRangeSelect = document.getElementById("time-range-select");
+const compareForm = document.getElementById("compare-form");
+const comparisonMessage = document.getElementById("comparison-message");
+const comparisonResults = document.getElementById("comparison-results");
+const chartCanvas = document.getElementById("chart");
+
+const fallbackCoins = [
+  { id:"bitcoin", name:"Bitcoin", symbol:"BTC" },
+  { id:"ethereum", name:"Ethereum", symbol:"ETH" },
+  { id:"solana", name:"Solana", symbol:"SOL" },
+  { id:"cardano", name:"Cardano", symbol:"ADA" },
+  { id:"dogecoin", name:"Dogecoin", symbol:"DOGE" }
+];
+
+async function fetchCoinList() {
+  try {
+    const res = await fetch("https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1");
+    const coins = await res.json();
+    populateDropdowns(coins);
+  } catch (e) {
+    populateDropdowns(fallbackCoins);
+  }
+}
+
+function populateDropdowns(coins) {
+  coinSelect1.innerHTML = '<option value="">Select Coin</option>';
+  coinSelect2.innerHTML = '<option value="">Select Coin</option>';
+  coins.sort((a,b)=>a.name.localeCompare(b.name));
+  coins.forEach(c => {
+    coinSelect1.append(new Option(`${c.name} (${c.symbol.toUpperCase()})`, c.id));
+    coinSelect2.append(new Option(`${c.name} (${c.symbol.toUpperCase()})`, c.id));
+  });
+}
+
+async function fetchCoinHistory(coinId, days) {
+  const res = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`);
+  return await res.json();
+}
+
+async function renderChart(coin1Id, coin2Id) {
+  comparisonMessage.textContent = "Loading...";
+  const days = timeRangeSelect.value;
+  const [data1, data2] = await Promise.all([
+    fetchCoinHistory(coin1Id, days),
+    fetchCoinHistory(coin2Id, days)
+  ]);
+
+  const labels = data1.prices.map(p => new Date(p[0]));
+  const prices1 = data1.prices.map(p => p[1]);
+  const prices2 = data2.prices.map(p => p[1]);
+
+  if(chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(chartCanvas, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        { label: coin1Id.toUpperCase(), data: prices1, borderColor:'#00d4ff', tension:0.2 },
+        { label: coin2Id.toUpperCase(), data: prices2, borderColor:'#ff4d4d', tension:0.2 }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{
+        x:{type:'time', time:{unit:'day'}, title:{display:true, text:'Date'}},
+        y:{title:{display:true, text:'Price (USD)'}}
+      }
+    }
+  });
+
+  comparisonMessage.textContent = "";
+  comparisonResults.style.display = "block";
+}
+
+// Form submit
+compareForm.addEventListener("submit", async e=>{
+  e.preventDefault();
+  if(!coinSelect1.value || !coinSelect2.value || coinSelect1.value === coinSelect2.value){
+    comparisonMessage.textContent = "Please select two different coins.";
+    return;
+  }
+  await renderChart(coinSelect1.value, coinSelect2.value);
+});
+
+fetchCoinList();
+</script>
+</body>
+</html>
