@@ -1,0 +1,119 @@
+import { fetchCoinList, fetchCoinHistory } from './apiService.js';
+import { getCurrentUser, getUserPreferences, formatCurrency } from './utils.js';
+import { Stack, binarySearch } from './dsaUtils.js';
+
+const coin1Select = document.getElementById('coin1-select');
+const coin2Select = document.getElementById('coin2-select');
+const periodSelect = document.getElementById('time-period-select');
+const chartContainer1 = document.getElementById('chart-container-1');
+const chartContainer2 = document.getElementById('chart-container-2');
+
+let coinList = [];
+let userPrefs;
+let currentUserEmail;
+
+let chart1 = null;
+let chart2 = null;
+
+const recentCoins = new Stack(5);
+
+const populateCoinSelects = (coins) => {
+    const optionsHtml = coins.map(c => `<option value="${c.id}">${c.name} (${c.symbol.toUpperCase()})</option>`).join('');
+    coin1Select.innerHTML = '<option value="">Select Coin 1</option>' + optionsHtml;
+    coin2Select.innerHTML = '<option value="">Select Coin 2</option>' + optionsHtml;
+};
+
+const renderCharts = async () => {
+    const coin1Id = coin1Select.value;
+    const coin2Id = coin2Select.value;
+    const days = periodSelect.value;
+
+    if (!coin1Id && !coin2Id) return;
+
+    const currency = userPrefs.currency.toLowerCase();
+
+    let coin1Data = [];
+    let coin2Data = [];
+
+    if (coin1Id) {
+        coin1Data = await fetchCoinHistory(coin1Id, currency, days);
+        recentCoins.push(coin1Id);
+    }
+    if (coin2Id) {
+        coin2Data = await fetchCoinHistory(coin2Id, currency, days);
+        recentCoins.push(coin2Id);
+    }
+
+    const createChart = (ctx, data, coinId) => {
+        const labels = data.map(d => new Date(d[0]).toLocaleDateString());
+        const prices = data.map(d => d[1]);
+
+        return new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `${coinList.find(c => c.id === coinId).name} Price`,
+                    data: prices,
+                    borderColor: coinId === coin1Id ? '#3498db' : '#e74c3c',
+                    backgroundColor: 'rgba(0,0,0,0)',
+                    tension: 0.2,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    title: {
+                        display: true,
+                        text: `${coinList.find(c => c.id === coinId).name} Price Chart`,
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return formatCurrency(context.parsed.y, userPrefs.currency);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { display: true },
+                    y: { display: true }
+                }
+            }
+        });
+    };
+
+    if (chart1) chart1.destroy();
+    if (coin1Id && coin1Data.length > 0) {
+        chart1 = createChart(chartContainer1.getContext('2d'), coin1Data, coin1Id);
+    }
+
+    if (chart2) chart2.destroy();
+    if (coin2Id && coin2Data.length > 0) {
+        chart2 = createChart(chartContainer2.getContext('2d'), coin2Data, coin2Id);
+    }
+};
+
+const initComparePage = async () => {
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    currentUserEmail = currentUser.email;
+    userPrefs = getUserPreferences(currentUserEmail);
+    document.documentElement.setAttribute('data-theme', userPrefs.theme);
+
+    coinList = await fetchCoinList();
+    populateCoinSelects(coinList);
+
+    coin1Select.addEventListener('change', renderCharts);
+    coin2Select.addEventListener('change', renderCharts);
+    periodSelect.addEventListener('change', renderCharts);
+
+    renderCharts();
+};
+
+initComparePage();
