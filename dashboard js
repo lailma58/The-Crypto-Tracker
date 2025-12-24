@@ -1,0 +1,265 @@
+import { fetchTopCoins } from './apiService.js';
+import { 
+    getCurrentUser, 
+    getUserPreferences, 
+    formatCurrency, 
+    formatPercentage 
+} from './utils.js';
+
+let currentPage = 1;
+const perPage = 25;
+let currentSort = 'market_cap_desc';
+
+let allCoinsData = [];
+let displayedCoins = [];
+
+let BASE_CURRENCY_SYMBOL = "usd";
+
+const coinListElement = document.getElementById('coin-list');
+const updateStatusElement = document.getElementById('update-status');
+const coinSearchInput = document.getElementById('coin-search');
+const sortBySelect = document.getElementById('sort-by');
+const prevPageBtn = document.getElementById('prev-page-btn');
+const nextPageBtn = document.getElementById('next-page-btn');
+const pageInfoSpan = document.getElementById('page-info');
+
+const loadUserCurrency = () => {
+    const user = getCurrentUser();
+    if (user) {
+        const prefs = getUserPreferences(user.email);
+        if (prefs?.currency) {
+            BASE_CURRENCY_SYMBOL = prefs.currency;
+        }
+    }
+};
+
+let marketCapChart = null;
+let priceChangeChart = null;
+let volumeChart = null;
+
+const renderCharts = (coins) => {
+    if (!coins || coins.length === 0) return;
+
+    const top10 = coins.slice(0, 10);
+    const top20 = coins.slice(0, 20);
+
+    const labels10 = top10.map(c => c.symbol.toUpperCase());
+    const marketCaps = top10.map(c => c.market_cap);
+    const priceChanges = top10.map(c => c.price_change_percentage_24h);
+
+    const labels20 = top20.map(c => c.symbol.toUpperCase());
+    const volumes20 = top20.map(c => c.total_volume);
+    const marketCaps20 = top20.map(c => c.market_cap);
+
+    if (marketCapChart) marketCapChart.destroy();
+    if (priceChangeChart) priceChangeChart.destroy();
+    if (volumeChart) volumeChart.destroy();
+
+    const ctx1 = document.getElementById('marketCapChart')?.getContext('2d');
+    if (ctx1) {
+        marketCapChart = new Chart(ctx1, {
+            type: 'pie',
+            data: {
+                labels: labels10,
+                datasets: [{
+                    label: 'Market Cap Share',
+                    data: marketCaps,
+                    backgroundColor: labels10.map(() =>
+                        `hsl(${Math.random() * 360}, 70%, 60%)`
+                    )
+                }]
+            }
+        });
+    }
+
+    const ctx2 = document.getElementById('priceChangeChart')?.getContext('2d');
+    if (ctx2) {
+        priceChangeChart = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: labels10,
+                datasets: [{
+                    label: '24h % Change',
+                    data: priceChanges,
+                    backgroundColor: priceChanges.map(v =>
+                        v >= 0 ? 'rgba(0,150,0,0.7)' : 'rgba(200,0,0,0.7)'
+                    )
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    const ctx3 = document.getElementById('volumeChart')?.getContext('2d');
+    if (ctx3) {
+        volumeChart = new Chart(ctx3, {
+            type: 'bar',
+            data: {
+                labels: labels20,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Market Cap',
+                        yAxisID: 'A',
+                        borderColor: '#007bff',
+                        data: marketCaps20,
+                        fill: false,
+                        tension: 0.3
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Volume',
+                        yAxisID: 'B',
+                        backgroundColor: 'rgba(255,165,0,0.6)',
+                        data: volumes20
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    A: { type: 'linear', position: 'left' },
+                    B: { type: 'linear', position: 'right' }
+                }
+            }
+        });
+    }
+};
+
+const renderCoins = (coins) => {
+    coinListElement.innerHTML = '';
+
+    if (!coins || coins.length === 0) {
+        coinListElement.innerHTML = `
+            <tr>
+                <td colspan="7" class="loading-message">
+                    No coins found matching your criteria.
+                </td>
+            </tr>`;
+        return;
+    }
+
+    const rows = coins.map(coin => {
+        const priceChange = coin.price_change_percentage_24h;
+        const changeClass = priceChange >= 0 ? 'text-success' : 'text-danger';
+
+        return `
+            <tr>
+                <td>${coin.market_cap_rank}</td>
+                <td>
+                    <a href="coin.html?id=${coin.id}" class="coin-link">
+                        <img src="${coin.image}" width="24" height="24">
+                        ${coin.name}
+                        <span class="symbol-tag">${coin.symbol.toUpperCase()}</span>
+                    </a>
+                </td>
+                <td>${formatCurrency(coin.current_price, BASE_CURRENCY_SYMBOL)}</td>
+                <td class="${changeClass}">${formatPercentage(priceChange)}</td>
+                <td>${formatCurrency(coin.market_cap, BASE_CURRENCY_SYMBOL, true)}</td>
+                <td>${formatCurrency(coin.total_volume, BASE_CURRENCY_SYMBOL, true)}</td>
+                <td><a href="portfolio.html" class="btn btn-primary btn-small">Trade</a></td>
+            </tr>
+        `;
+    }).join('');
+
+    coinListElement.innerHTML = rows;
+};
+
+const updateDashboardData = async () => {
+    try {
+        updateStatusElement.textContent = "Fetching real-time data...";
+
+        const coins = await fetchTopCoins(
+            BASE_CURRENCY_SYMBOL,
+            currentPage,
+            perPage,
+            currentSort
+        );
+
+        if (!coins) throw new Error("API returned no data");
+
+        if (coins.length === 0 && currentPage > 1) {
+            currentPage = 1;
+            return updateDashboardData();
+        }
+
+        allCoinsData = coins;
+        displayedCoins = coins;
+
+        renderCoins(coins);
+        renderCharts(coins);
+
+        updateStatusElement.textContent = 
+            `Last updated: ${new Date().toLocaleTimeString()} (${BASE_CURRENCY_SYMBOL.toUpperCase()})`;
+
+        updatePaginationControls(coins.length);
+
+    } catch (err) {
+        updateStatusElement.textContent = "Error fetching data";
+        coinListElement.innerHTML = `
+            <tr><td colspan="7" class="loading-message">Failed to load market data.</td></tr>`;
+        console.error(err);
+    }
+};
+
+const handleSearch = () => {
+    const query = coinSearchInput.value.toLowerCase().trim();
+
+    displayedCoins = query === ""
+        ? allCoinsData
+        : allCoinsData.filter(coin =>
+            coin.name.toLowerCase().includes(query) ||
+            coin.symbol.toLowerCase().includes(query)
+        );
+
+    renderCoins(displayedCoins);
+    renderCharts(displayedCoins);
+};
+
+const handleSortChange = (e) => {
+    currentSort = e.target.value;
+    currentPage = 1;
+    updateDashboardData();
+};
+
+const updatePaginationControls = (resultCount) => {
+    pageInfoSpan.textContent = `Page ${currentPage}`;
+
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = resultCount < perPage;
+};
+
+const changePage = (delta) => {
+    const nextPage = currentPage + delta;
+    if (nextPage >= 1) {
+        currentPage = nextPage;
+        updateDashboardData();
+    }
+};
+
+const initDashboard = () => {
+    const user = getCurrentUser();
+    if (!user) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    const prefs = getUserPreferences(user.email);
+    if (prefs?.theme) {
+        document.documentElement.setAttribute('data-theme', prefs.theme);
+    }
+
+    loadUserCurrency();
+
+    coinSearchInput.addEventListener('input', handleSearch);
+    sortBySelect.addEventListener('change', handleSortChange);
+    prevPageBtn.addEventListener('click', () => changePage(-1));
+    nextPageBtn.addEventListener('click', () => changePage(1));
+
+    updateDashboardData();
+
+    setInterval(updateDashboardData, 60000);
+};
+
+initDashboard();
