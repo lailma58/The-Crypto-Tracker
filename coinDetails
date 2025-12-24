@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coin Details</title>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Poppins",sans-serif;}
+body{
+  background:linear-gradient(135deg,#000428,#004e92);
+  color:#fff;
+  min-height:100vh;
+}
+
+/* Glow effects */
+.glow, .glow2{
+  position:absolute;width:500px;height:500px;border-radius:50%;filter:blur(120px);animation:float 10s ease-in-out infinite alternate; z-index:-1;
+}
+.glow{background:radial-gradient(circle, rgba(0,204,255,0.5), transparent 70%); top:-150px; left:-150px;}
+.glow2{background:radial-gradient(circle, rgba(255,0,200,0.4), transparent 70%); bottom:-100px; right:-100px; animation:float2 12s ease-in-out infinite alternate;}
+@keyframes float{from{transform:translate(-150px,-100px);}to{transform:translate(-50px,0px);} }
+@keyframes float2{from{transform:translate(50px,70px);}to{transform:translate(0px,-50px);} }
+
+/* Glass card */
+.glass {
+  backdrop-filter: blur(20px);
+  background: rgba(255,255,255,0.08);
+  padding:20px;
+  border-radius:20px;
+  margin:20px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.2);
+  animation:fadeIn 0.7s ease;
+}
+@keyframes fadeIn { from {opacity:0; transform:translateY(20px);} to {opacity:1; transform:translateY(0);} }
+
+img.coin-icon { width:80px; height:80px; display:block; margin:auto; }
+
+.back-btn {
+  padding:8px 15px;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  background:linear-gradient(135deg,#00c6ff,#0072ff);
+  color:#fff;
+  margin-left:20px;
+  margin-top:20px;
+}
+.back-btn:hover { transform:scale(1.05); }
+
+.btn-glass {
+  padding:10px 15px;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(10px);
+  color:#fff;
+  transition:0.3s;
+}
+.btn-glass:hover { transform:scale(1.05); }
+
+.range-btn {
+  padding:6px 12px;
+  background:#005fa3;
+  border:none;
+  border-radius:8px;
+  color:white;
+  cursor:pointer;
+}
+.range-btn:hover { background:#008cff; }
+.range-btn.active { background:#00c6ff; color:#000; }
+
+#chart-container {
+  margin-top:20px;
+  background:rgba(255,255,255,0.05);
+  padding:20px;
+  border-radius:15px;
+}
+</style>
+
+</head>
+<body>
+
+<div class="glow"></div>
+<div class="glow2"></div>
+
+<button class="back-btn" onclick="history.back()">⬅ Back</button>
+
+<div class="glass">
+  <h1 id="coin-name">Loading...</h1>
+  <img id="coin-icon" class="coin-icon" src="" alt="">
+  <h2 id="coin-price"></h2>
+  <p><b>Market Cap:</b> <span id="coin-mcap"></span></p>
+  <p><b>24h Change:</b> <span id="coin-change"></span></p>
+  <p><b>Rank:</b> <span id="coin-rank"></span></p>
+  <br>
+  <h3>Description:</h3>
+  <p id="coin-desc" style="opacity:0.8;"></p>
+
+  <h3 style="margin-top:25px;">Price Chart</h3>
+  <div style="display:flex; gap:10px; margin:10px 0;">
+      <button class="range-btn" data-days="1">24h</button>
+      <button class="range-btn" data-days="7">7d</button>
+      <button class="range-btn" data-days="30">30d</button>
+      <button class="range-btn" data-days="90">90d</button>
+      <button class="range-btn" data-days="365">1y</button>
+  </div>
+
+  <div id="chart-container">
+    <canvas id="priceChart"></canvas>
+  </div>
+</div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const coinId = urlParams.get("coinId");
+
+if(!coinId){
+  document.body.innerHTML="<h1 style='color:white;text-align:center;margin-top:50px;'>Invalid Coin!</h1>";
+}
+
+let priceChart; // Global chart instance
+
+async function loadCoinData(){
+  try {
+    // -------- COIN BASIC DATA --------
+    const res = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}`);
+    const coin = await res.json();
+
+    document.getElementById("coin-name").textContent = coin.name + " (" + coin.symbol.toUpperCase() + ")";
+    document.getElementById("coin-icon").src = coin.image.large;
+    document.getElementById("coin-price").textContent = "$" + coin.market_data.current_price.usd.toLocaleString();
+    document.getElementById("coin-mcap").textContent = "$" + coin.market_data.market_cap.usd.toLocaleString();
+    document.getElementById("coin-change").textContent = coin.market_data.price_change_percentage_24h.toFixed(2) + "%";
+    document.getElementById("coin-rank").textContent = coin.market_cap_rank;
+
+    document.getElementById("coin-desc").innerHTML =
+      coin.description.en ? coin.description.en.slice(0,300)+"..." : "No description available.";
+
+    // Load default chart 7d
+    loadChart(7, coin.name);
+
+  } catch(err){
+    console.error(err);
+    document.querySelector(".glass").innerHTML = "<h2>Error loading coin!</h2>";
+  }
+}
+
+// --------- CHART FUNCTION WITH RANGE ---------
+async function loadChart(days, coinName){
+    try {
+        const res = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`);
+        const chartData = await res.json();
+
+        const prices = chartData.prices.map(p => p[1]);
+        const labels = chartData.prices.map((p,i)=>{
+            if(days<=1) return new Date(p[0]).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+            return new Date(p[0]).toLocaleDateString();
+        });
+
+        const ctx = document.getElementById("priceChart").getContext("2d");
+
+        if(priceChart) priceChart.destroy();
+
+        priceChart = new Chart(ctx,{
+            type:"line",
+            data:{
+                labels,
+                datasets:[{
+                    label: coinName + " Price ("+days+"d)",
+                    data: prices,
+                    borderColor:"#00c6ff",
+                    backgroundColor:"rgba(0,198,255,0.2)",
+                    tension:0.3
+                }]
+            },
+            options:{
+                responsive:true,
+                plugins:{legend:{labels:{color:"white"}}},
+                scales:{
+                    x:{ticks:{color:"white"}},
+                    y:{ticks:{color:"white"}}
+                }
+            }
+        });
+
+    } catch(err){
+        console.error("Error loading chart:", err);
+    }
+}
+
+// --------- RANGE BUTTONS FUNCTIONALITY ---------
+document.querySelectorAll(".range-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+        document.querySelectorAll(".range-btn").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        const days = btn.getAttribute("data-days");
+        loadChart(days, document.getElementById("coin-name").textContent.split(" ")[0]);
+    });
+});
+
+// Set default active button 7d
+document.querySelector('.range-btn[data-days="7"]').classList.add("active");
+
+// Load coin data on page load
+loadCoinData();
+</script>
+
+</body>
+</html>
