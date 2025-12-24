@@ -1,0 +1,110 @@
+import { saveUserPreferences, getInitialPreferences } from './utils.js';
+
+export const getCurrentUser = () => {
+    const currentUserEmail = localStorage.getItem('cryptoTracker_currentUser');
+    if (currentUserEmail) {
+        return { email: currentUserEmail };
+    }
+    return null;
+};
+
+const getRegisteredUsers = () => {
+    const users = localStorage.getItem('cryptoTracker_users');
+    return users ? JSON.parse(users) : {};
+};
+
+const setRegisteredUsers = (users) => {
+    localStorage.setItem('cryptoTracker_users', JSON.stringify(users));
+};
+
+const handleSignup = (event) => {
+    event.preventDefault();
+    
+    const emailInput = document.getElementById('signup-email');
+    const passwordInput = document.getElementById('signup-password');
+    const messageElement = document.getElementById('signup-message');
+
+    const email = emailInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+    
+    if (password.length < 6) {
+        messageElement.textContent = 'Password must be at least 6 characters.';
+        messageElement.className = 'message error';
+        return;
+    }
+
+    const users = getRegisteredUsers();
+
+    if (users[email]) {
+        messageElement.textContent = 'This email is already registered. Please log in.';
+        messageElement.className = 'message error';
+        return;
+    }
+
+    users[email] = { password: password }; 
+    setRegisteredUsers(users);
+
+    saveUserPreferences(email, getInitialPreferences());
+
+    messageElement.textContent = 'Registration successful! Redirecting to login...';
+    messageElement.className = 'message success';
+    
+    setTimeout(() => {
+        window.location.href = 'index.html';
+    }, 1500);
+};
+
+const handleLogin = (event) => {
+    event.preventDefault();
+
+    const emailInput = document.getElementById('login-email');
+    const passwordInput = document.getElementById('login-password');
+    const messageElement = document.getElementById('login-message');
+
+    const email = emailInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+
+    const users = getRegisteredUsers();
+    const user = users[email];
+
+    if (user && user.password === password) {
+        localStorage.setItem('cryptoTracker_currentUser', email);
+        
+        messageElement.textContent = 'Login successful! Redirecting...';
+        messageElement.className = 'message success';
+        
+        setTimeout(() => {
+            window.location.href = 'home.html';
+        }, 500);
+    } else {
+        messageElement.textContent = 'Invalid email or password.';
+        messageElement.className = 'message error';
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    
+    const currentUser = getCurrentUser();
+    if (currentUser && (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('signup.html') || window.location.pathname.endsWith('/'))) {
+         window.location.href = 'home.html';
+         return;
+    }
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+
+    if (signupForm) {
+        signupForm.addEventListener('submit', handleSignup);
+    }
+    
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('cryptoTracker_currentUser');
+            window.location.href = 'index.html';
+        });
+    }
+});
