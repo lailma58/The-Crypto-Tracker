@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>News & Insights | Crypto Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Poppins",sans-serif;}
+body{background:linear-gradient(135deg,#000428,#004e92);min-height:100vh;color:#e9faff;overflow-x:hidden;}
+
+.glow-one,.glow-two{position:fixed;width:550px;height:550px;z-index:-1;border-radius:50%;filter:blur(150px);opacity:.7;}
+.glow-one{background:radial-gradient(circle,rgba(0,200,255,.6),transparent 70%);top:-120px;left:-120px;animation:float1 12s ease-in-out infinite alternate;}
+.glow-two{background:radial-gradient(circle,rgba(255,0,200,.5),transparent 70%);bottom:-120px;right:-120px;animation:float2 15s ease-in-out infinite alternate;}
+@keyframes float1{from{transform:translate(-40px,-20px);}to{transform:translate(40px,20px);}}
+@keyframes float2{from{transform:translate(40px,40px);}to{transform:translate(-40px,-40px);}}
+
+header{backdrop-filter:blur(20px);background:rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.2);padding:15px 25px;display:flex;justify-content:space-between;align-items:center;border-radius:15px;margin:10px;}
+header nav a{color:#00f2ff;text-decoration:none;margin-right:20px;font-weight:500;transition:.3s;}
+header nav a:hover{color:#92FE9D;text-shadow:0 0 8px rgba(0,255,255,.6);}
+header nav a[style*="font-weight:bold"]{color:#fff;}
+#logout-btn{background:linear-gradient(135deg,#ff0055,#ff4d4d);padding:10px 15px;border-radius:12px;border:none;color:#fff;font-weight:500;cursor:pointer;transition:.3s;box-shadow:0 4px 15px rgba(255,50,100,.4);}
+#logout-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,50,100,.6);}
+
+.container{width:90%;max-width:1200px;margin:30px auto 60px;}
+h1{margin-bottom:20px;color:#fff;text-shadow:0 0 8px rgba(0,200,255,.4);}
+
+.card{backdrop-filter:blur(18px);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:18px;padding:20px;margin-bottom:20px;box-shadow:0 0 18px rgba(0,0,0,.3);transition:.3s;}
+.card:hover{transform:translateY(-3px);box-shadow:0 0 25px rgba(0,255,255,.4);}
+
+.search-sort-group{display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;}
+.loading-message{text-align:center;padding:30px;color:#aaa;}
+.news-item{padding:15px;border-bottom:1px solid rgba(255,255,255,.1);transition:.2s;border-radius:12px;cursor:pointer;}
+.news-item:hover{background:rgba(255,255,255,.05);transform:translateY(-2px);}
+.news-item h3{margin:0;font-size:1.2em;}
+.news-item p{margin:5px 0;color:#ccc;font-size:.9em;}
+.status-text{color:#00C9FF;margin-top:10px;}
+
+.modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background-color:rgba(0,0,0,.8);backdrop-filter:blur(10px);}
+.modal-content{background:rgba(255,255,255,.15);margin:10% auto;padding:20px;border:1px solid rgba(255,255,255,.3);border-radius:18px;width:80%;max-width:600px;box-shadow:0 0 30px rgba(0,255,255,.5);}
+.modal-content h2{color:#fff;margin-bottom:10px;}
+.modal-content p{color:#ccc;margin-bottom:15px;}
+.modal-content .meta{font-size:.9em;color:#aaa;margin-bottom:20px;}
+.modal-content a{color:#00C9FF;text-decoration:none;font-weight:bold;}
+.close{color:#aaa;float:right;font-size:28px;font-weight:bold;cursor:pointer;}
+.close:hover{color:#fff;}
+
+.skeleton{height:110px;border-radius:18px;background:linear-gradient(90deg,rgba(255,255,255,.08) 40%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.08) 60%);background-size:200% 100%;animation:shine 1.2s infinite;}
+@keyframes shine{to{background-position:-200% 0;}}
+
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:rgba(255,255,255,.05)}
+::-webkit-scrollbar-thumb{background:rgba(0,200,255,.4);border-radius:4px}
+
+#copy-link-btn{margin-top:10px;background:#00C9FF;color:#000;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600;}
+#last-updated-badge{font-size:.75rem;color:#92fe9d;margin-left:10px;}
+</style>
+</head>
+
+<body>
+<div class="glow-one"></div>
+<div class="glow-two"></div>
+
+<header>
+<nav>
+<a href="home.html">Home</a>
+<a href="dashboard.html">Dashboard</a>
+<a href="portfolio.html">Portfolio</a>
+<a href="compare.html">Compare</a>
+<a href="favorites.html">Favorites</a>
+<a href="news.html" style="font-weight:bold">News</a>
+<a href="settings.html">Settings</a>
+</nav>
+<button id="logout-btn">Logout</button>
+</header>
+
+<main class="container">
+<h1>Latest Crypto News & Insights<span id="last-updated-badge"></span></h1>
+
+<div class="dashboard-controls card">
+<div class="search-sort-group">
+<select id="news-filter-source">
+<option value="all">Filter by Source (All)</option>
+<option value="CoinDesk">CoinDesk</option>
+<option value="Decrypt">Decrypt</option>
+<option value="The Block">The Block</option>
+<option value="General">General</option>
+</select>
+<select id="news-sort">
+<option value="newest">Sort by: Newest First</option>
+<option value="oldest">Sort by: Oldest First</option>
+</select>
+</div>
+<p id="news-status" class="status-text">Loading…</p>
+</div>
+
+<section id="news-feed">
+<div class="skeleton card"></div>
+<div class="skeleton card"></div>
+<div class="skeleton card"></div>
+</section>
+</main>
+
+<div id="news-modal" class="modal">
+<div class="modal-content">
+<span class="close">&times;</span>
+<h2 id="modal-title"></h2>
+<p id="modal-description"></p>
+<div class="meta" id="modal-meta"></div>
+<a id="modal-link" href="#" target="_blank">Read full article</a>
+<button id="copy-link-btn">Copy link</button>
+</div>
+</div>
+
+<footer>&copy; 2025 Crypto Tracker</footer>
+
+<script>
+const $=q=>document.querySelector(q);
+const formatDate=d=>new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+const capitalize=s=>s.charAt(0).toUpperCase()+s.slice(1);
+
+async function fetchNews(){
+try{
+const r=await fetch('https://api.coingecko.com/api/v3/news?per_page=20');
+const b=await r.json();
+return b.data.map(n=>({title:n.title,description:n.description,url:n.url,source:n.source,publishedAt:n.created_at}));
+}catch{
+return[{title:"Bitcoin ETF inflows hit monthly record",description:"Spot ETFs added another $1.2 B last week.",url:"#",source:"CoinDesk",publishedAt:new Date().toISOString()}];
+}
+}
+
+let newsData=[];
+async function loadNews(){
+$('#news-status').textContent='Fetching live feed…';
+newsData=await fetchNews();
+$('#last-updated-badge').textContent='(updated '+new Date().toLocaleTimeString()+')';
+updateNews();
+}
+
+function renderNews(list){
+const f=$('#news-feed');
+f.innerHTML='';
+if(!list.length){f.innerHTML='<div class="card loading-message">No articles match your filters.</div>';return;}
+list.forEach(a=>{
+const d=document.createElement('div');
+d.className='news-item card';
+d.innerHTML=`<h3>${capitalize(a.title)}</h3><p>${a.description}</p><p><small>Source: ${a.source} | Published: ${formatDate(a.publishedAt)}</small></p>`;
+d.onclick=()=>openModal(a);
+f.appendChild(d);
+});
+$('#news-status').textContent=`Showing ${list.length} article${list.length>1?'s':''}.`;
+}
+
+function updateNews(){
+const s=$('#news-filter-source').value;
+const o=$('#news-sort').value;
+let f=s==='all'?newsData:newsData.filter(n=>n.source===s);
+f.sort((a,b)=>o==='newest'?new Date(b.publishedAt)-new Date(a.publishedAt):new Date(a.publishedAt)-new Date(b.publishedAt));
+renderNews(f);
+}
+
+function openModal(i){
+$('#modal-title').textContent=capitalize(i.title);
+$('#modal-description').textContent=i.description;
+$('#modal-meta').textContent=`Source: ${i.source} | Published: ${formatDate(i.publishedAt)}`;
+$('#modal-link').href=i.url;
+$('#news-modal').style.display='block';
+}
+function closeModal(){ $('#news-modal').style.display='none'; }
+
+$('#logout-btn').onclick=()=>location.href='login.html';
+$('#news-filter-source').onchange=updateNews;
+$('#news-sort').onchange=updateNews;
+$('.close').onclick=closeModal;
+window.onkeydown=e=>e.key==='Escape'&&closeModal();
+$('#copy-link-btn').onclick=()=>{
+navigator.clipboard.writeText($('#modal-link').href);
+$('#copy-link-btn').textContent='Copied!';
+setTimeout(()=>$('#copy-link-btn').textContent='Copy link',1500);
+};
+
+loadNews();
+setInterval(loadNews,3600000);
+</script>
+</body>
+</html>
