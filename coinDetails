@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Coin Details</title>
 
-<!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -16,7 +15,6 @@ body{
   min-height:100vh;
 }
 
-/* Glow effects */
 .glow, .glow2{
   position:absolute;width:500px;height:500px;border-radius:50%;filter:blur(120px);animation:float 10s ease-in-out infinite alternate; z-index:-1;
 }
@@ -25,7 +23,6 @@ body{
 @keyframes float{from{transform:translate(-150px,-100px);}to{transform:translate(-50px,0px);} }
 @keyframes float2{from{transform:translate(50px,70px);}to{transform:translate(0px,-50px);} }
 
-/* Glass card */
 .glass {
   backdrop-filter: blur(20px);
   background: rgba(255,255,255,0.08);
@@ -123,11 +120,10 @@ if(!coinId){
   document.body.innerHTML="<h1 style='color:white;text-align:center;margin-top:50px;'>Invalid Coin!</h1>";
 }
 
-let priceChart; // Global chart instance
+let priceChart;
 
 async function loadCoinData(){
   try {
-    // -------- COIN BASIC DATA --------
     const res = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}`);
     const coin = await res.json();
 
@@ -141,7 +137,6 @@ async function loadCoinData(){
     document.getElementById("coin-desc").innerHTML =
       coin.description.en ? coin.description.en.slice(0,300)+"..." : "No description available.";
 
-    // Load default chart 7d
     loadChart(7, coin.name);
 
   } catch(err){
@@ -150,7 +145,6 @@ async function loadCoinData(){
   }
 }
 
-// --------- CHART FUNCTION WITH RANGE ---------
 async function loadChart(days, coinName){
     try {
         const res = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`);
@@ -193,7 +187,6 @@ async function loadChart(days, coinName){
     }
 }
 
-// --------- RANGE BUTTONS FUNCTIONALITY ---------
 document.querySelectorAll(".range-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{
         document.querySelectorAll(".range-btn").forEach(b=>b.classList.remove("active"));
@@ -203,10 +196,8 @@ document.querySelectorAll(".range-btn").forEach(btn=>{
     });
 });
 
-// Set default active button 7d
 document.querySelector('.range-btn[data-days="7"]').classList.add("active");
 
-// Load coin data on page load
 loadCoinData();
 </script>
 
