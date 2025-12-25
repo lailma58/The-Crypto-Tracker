@@ -20,6 +20,9 @@ Clean and user-friendly interface
 HTML / CSS / JavaScript
 API (Crypto price data)
 
+## Demo Screenshots
+<img width="646" height="531" alt="1" src="https://github.com/user-attachments/assets/0609570f-8249-4ddd-a4c5-29c27bb89329" />
+
 
 ## Supervision Note
 This project was developed for the Data Structures and Algorithms (DSA) course under the supervision of Lab Engineer Obaidullah Miakhil.
