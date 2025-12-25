@@ -25,7 +25,7 @@ API (Crypto price data)
 <img width="646" height="531" alt="1" src="https://github.com/user-attachments/assets/0609570f-8249-4ddd-a4c5-29c27bb89329" />
 
 ## Home 
-<img width="1344" height="626" alt="2" src="https://github.com/user-attachments/assets/fbfe3d65-22ac-496d-bcb7-aea012f1516d" />
+<img width="1344" height="626" alt="2" src="https://github.com/user-attachments/assets/643809d9-8cb3-4f11-acb9-68f53752176a" />
 
 ## Dashboard
 <img width="1334" height="546" alt="3" src="https://github.com/user-attachments/assets/864e5c94-37c7-437f-8842-7dee6e2dcb2e" />
